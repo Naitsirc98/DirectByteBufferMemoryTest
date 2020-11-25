@@ -64,22 +64,20 @@ public class TestDirectByteBuffer {
         Runtime r = Runtime.getRuntime();
 
         final long start = System.currentTimeMillis();
-        long timer = start;
-        int secondsPassed = 0;
 
-        for(int j = 0;j < 3;j++) {
-            for(int i = 0;i < buffer.capacity();i++) {
+        for(int j = 0;j < args.iterations;j++) {
+            System.out.println(">> Starting iteration " + j + "...");
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+            for(int i = 0;i < 100000;i++) {
                 final int pos1 = random.nextInt(buffer.capacity());
                 final int pos2 = random.nextInt(buffer.capacity());
                 buffer.put(pos1, random.nextBoolean() ? (byte) i : buffer.get(pos2));
-                if(args.exception && secondsPassed >= 5 && random.nextBoolean()) {
-                    throw new RuntimeException("User requested exception: buffer = " + buffer);
-                }
-                if(System.currentTimeMillis() - timer >= 5000) {
-                    secondsPassed += 5;
-                    System.out.println(">> Iteration " + j + " at buffer position " + i + " of " + buffer.capacity()
-                            + "... " + (System.currentTimeMillis() - start) / 1000.0 + " seconds passed.");
-                    timer = System.currentTimeMillis();
+                if(args.exception && j >= 2 && random.nextBoolean()) {
+                    throw new UserRequestedException("User requested exception: buffer = " + buffer);
                 }
             }
             buffer.clear();
@@ -88,7 +86,7 @@ public class TestDirectByteBuffer {
             }
         }
 
-        System.out.println(">> Loop terminated.");
+        System.out.println(">> Loop terminated in " + (System.currentTimeMillis() - start) / 1000.0 + " seconds.");
 
         if(args.free) {
             System.out.println(">> Deleting buffer explicitly...");
@@ -137,6 +135,7 @@ public class TestDirectByteBuffer {
     private static void help() {
         System.out.println("==> Test Direct Byte Buffers <==");
         System.out.println("Params:");
+        System.out.println("  -iterations=<number of iterations>: specify number of iterations (seconds) of the test. Default is 10.");
         System.out.println("  -exc: if you want to throw an exception in the middle of execution.");
         System.out.println("  -size=<bytes>: to specify size in MB. Default is 1024 MB (1GB).");
         System.out.println("  -free: if you want to explicitly invoke cleaner of DirectByteBuffer.");
@@ -149,6 +148,7 @@ public class TestDirectByteBuffer {
 
     private static class Args {
 
+        private int iterations = 10;
         private boolean exception;
         private int bufferSize = 1024;
         private boolean free;
@@ -159,14 +159,12 @@ public class TestDirectByteBuffer {
         public Args(String[] args) {
             for(String arg : args) {
                 String argument = arg.trim().toLowerCase();
-                if(argument.equals("-exc")) {
+                if(argument.startsWith("-iterations")) {
+                    iterations = parseInt(argument, iterations);
+                } else if(argument.equals("-exc")) {
                     exception = true;
                 } else if(argument.contains("size")) {
-                    try {
-                        bufferSize = Integer.parseInt(argument.substring(argument.indexOf('=')+1).trim());
-                    } catch(NumberFormatException e) {
-                        System.err.println(">> Invalid buffer size " + argument + ". Using default size...");
-                    }
+                    bufferSize = parseInt(argument, bufferSize);
                 } else if(argument.equals("-free")) {
                     if(checkMemAfterGc) {
                         throw new RuntimeException("free with checkMemAfterGc makes no sense.");
@@ -189,11 +187,21 @@ public class TestDirectByteBuffer {
             }
         }
 
+        private int parseInt(String argument, int defaultValue) {
+            try {
+                return Integer.parseInt(argument.substring(argument.indexOf('=')+1).trim());
+            } catch(NumberFormatException e) {
+                System.err.println(">> Invalid int value in: " + argument + ". Using default:" + defaultValue);
+            }
+            return defaultValue;
+        }
+
         @Override
         public String toString() {
             return "Args{" +
-                    "exception=" + exception +
-                    ", bufferSize=" + bufferSize + " MB"+
+                    "iterations=" + iterations +
+                    ", exception=" + exception +
+                    ", bufferSize=" + bufferSize + " MB" +
                     ", free=" + free +
                     ", gc=" + gc +
                     ", crash=" + crash +
