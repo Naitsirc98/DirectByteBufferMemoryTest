@@ -1,4 +1,4 @@
-package bbt;
+package naitsirc98.bytebuffertest;
 
 import sun.misc.Unsafe;
 
