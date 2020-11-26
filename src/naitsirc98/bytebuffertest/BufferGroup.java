@@ -17,7 +17,7 @@ public class BufferGroup {
         buffers = new ByteBuffer[arguments.numBuffers()];
         addresses = new long[arguments.numBuffers()];
         for(int i = 0;i < arguments.numBuffers();i++) {
-            buffers[i] = allocBuffer(arguments.bufferSize());
+            buffers[i] = allocBuffer((long)arguments.bufferSize() * 1024L * 1024L);
             addresses[i] = addressOf(buffers[i]);
         }
     }
